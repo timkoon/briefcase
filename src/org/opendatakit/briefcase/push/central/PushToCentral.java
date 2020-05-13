@@ -18,10 +18,12 @@ package org.opendatakit.briefcase.push.central;
 
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
+import static org.opendatakit.briefcase.reused.UncheckedFiles.closeInputStream;
 import static org.opendatakit.briefcase.reused.UncheckedFiles.exists;
 import static org.opendatakit.briefcase.reused.UncheckedFiles.list;
 import static org.opendatakit.briefcase.reused.UncheckedFiles.readAllBytes;
 
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -173,6 +175,11 @@ public class PushToCentral {
     tracker.trackStartSendingForm();
     Response response = http.execute(server.getPushFormRequest(formFile, token));
 
+    for (InputStream stream : server.getFileStreams()) {
+      closeInputStream(stream);
+    }
+    server.getFileStreams().clear();
+
     if (response.isSuccess()) {
       tracker.trackEndSendingForm();
       return true;
@@ -195,6 +202,12 @@ public class PushToCentral {
 
     tracker.trackStartSendingFormAttachment(attachmentNumber, totalAttachments);
     Response response = http.execute(server.getPushFormAttachmentRequest(formId, attachment, token));
+
+    for (InputStream stream : server.getFileStreams()) {
+      closeInputStream(stream);
+    }
+    server.getFileStreams().clear();
+
     if (response.isSuccess())
       tracker.trackEndSendingFormAttachment(attachmentNumber, totalAttachments);
     else if (response.getStatusCode() == 409)
@@ -211,6 +224,11 @@ public class PushToCentral {
 
     tracker.trackStartSendingSubmission(submissionNumber, totalSubmissions);
     Response response = http.execute(server.getPushSubmissionRequest(token, formId, submissionFile));
+
+    for (InputStream stream : server.getFileStreams()) {
+      closeInputStream(stream);
+    }
+    server.getFileStreams().clear();
 
     if (response.isSuccess()) {
       tracker.trackEndSendingSubmission(submissionNumber, totalSubmissions);
@@ -234,6 +252,12 @@ public class PushToCentral {
 
     tracker.trackStartSendingSubmissionAttachment(submissionNumber, totalSubmissions, attachmentNumber, totalAttachments);
     Response response = http.execute(server.getPushSubmissionAttachmentRequest(token, formId, instanceId, attachment));
+
+    for (InputStream stream : server.getFileStreams()) {
+      closeInputStream(stream);
+    }
+    server.getFileStreams().clear();
+
     if (response.isSuccess())
       tracker.trackEndSendingSubmissionAttachment(submissionNumber, totalSubmissions, attachmentNumber, totalAttachments);
     else if (response.getStatusCode() == 409)

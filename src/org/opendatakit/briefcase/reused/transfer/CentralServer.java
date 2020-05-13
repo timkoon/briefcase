@@ -19,8 +19,10 @@ package org.opendatakit.briefcase.reused.transfer;
 import static java.util.stream.Collectors.toList;
 import static org.opendatakit.briefcase.reused.UncheckedFiles.newInputStream;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,11 +44,13 @@ public class CentralServer implements RemoteServer {
   private final URL baseUrl;
   private final int projectId;
   private final Credentials credentials;
+  private List<InputStream> fileStreams;
 
   private CentralServer(URL baseUrl, int projectId, Credentials credentials) {
     this.baseUrl = baseUrl;
     this.projectId = projectId;
     this.credentials = credentials;
+    this.fileStreams = new ArrayList<>();
   }
 
   public static CentralServer of(URL baseUrl, int projectId, Credentials credentials) {
@@ -69,6 +73,8 @@ public class CentralServer implements RemoteServer {
     int index = url.indexOf("/#/");
     return index == -1 ? url : url.substring(0, index);
   }
+
+  public List<InputStream> getFileStreams() { return fileStreams; }
 
   public Request<String> getProjectTestRequest(String token) {
     return RequestBuilder.get(baseUrl)
@@ -170,46 +176,54 @@ public class CentralServer implements RemoteServer {
   }
 
   public Request<Map<String, Object>> getPushFormRequest(Path formFile, String token) {
+    InputStream formFileStream = newInputStream(formFile);
+    fileStreams.add(formFileStream);
     return RequestBuilder.post(baseUrl)
         .asJsonMap()
         .withIgnoreCookies()
         .withPath("/v1/projects/" + projectId + "/forms")
         .withHeader("Authorization", "Bearer " + token)
         .withHeader("Content-Type", "application/xml")
-        .withBody(newInputStream(formFile))
+        .withBody(formFileStream)
         .build();
   }
 
   public Request<Map<String, Object>> getPushFormAttachmentRequest(String formId, Path attachment, String token) {
+    InputStream attachmentStream = newInputStream(attachment);
+    fileStreams.add(attachmentStream);
     return RequestBuilder.post(baseUrl)
         .asJsonMap()
         .withIgnoreCookies()
         .withPath("/v1/projects/" + projectId + "/forms/" + formId + "/attachments/" + attachment.getFileName().toString())
         .withHeader("Authorization", "Bearer " + token)
         .withHeader("Content-Type", "*/*")
-        .withBody(newInputStream(attachment))
+        .withBody(attachmentStream)
         .build();
   }
 
   public Request<Map<String, Object>> getPushSubmissionRequest(String token, String formId, Path submission) {
+    InputStream submissionStream = newInputStream(submission);
+    fileStreams.add(submissionStream);
     return RequestBuilder.post(baseUrl)
         .asJsonMap()
         .withIgnoreCookies()
         .withPath("/v1/projects/" + projectId + "/forms/" + formId + "/submissions")
         .withHeader("Authorization", "Bearer " + token)
         .withHeader("Content-Type", "application/xml")
-        .withBody(newInputStream(submission))
+        .withBody(submissionStream)
         .build();
   }
 
   public Request<Map<String, Object>> getPushSubmissionAttachmentRequest(String token, String formId, String instanceId, Path attachment) {
+    InputStream attachmentStream = newInputStream(attachment);
+    fileStreams.add(attachmentStream);
     return RequestBuilder.post(baseUrl)
         .asJsonMap()
         .withIgnoreCookies()
         .withPath("/v1/projects/" + projectId + "/forms/" + formId + "/submissions/" + instanceId + "/attachments/" + attachment.getFileName().toString())
         .withHeader("Authorization", "Bearer " + token)
         .withHeader("Content-Type", "*/*")
-        .withBody(newInputStream(attachment))
+        .withBody(attachmentStream)
         .build();
   }
 
